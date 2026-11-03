@@ -2,8 +2,8 @@ name: BD Nightly Pulse
 
 on:
   schedule:
-    - cron: '30 21 * * *' # Runs at 22:30 CET every night
-  workflow_dispatch:      # Lets you trigger a test run anytime with 1 click
+    - cron: '30 21 * * *' # বাংলাদেশ সময় রাত ৩:৩০ (UTC রাত ৯:৩০)
+  workflow_dispatch:      
 
 permissions:
   contents: write
