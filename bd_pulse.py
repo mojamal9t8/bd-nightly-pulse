@@ -1,4 +1,5 @@
 import os
+import time
 import json
 import datetime
 import feedparser
@@ -81,6 +82,27 @@ def send_telegram_message(text):
             "disable_web_page_preview": True
         })
 
+def generate_with_fallback(client, prompt):
+    # Tries your available models in order and retries if Google's server has a temporary spike
+    models = [
+        "gemini-3.8-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-pro",
+        "gemini-3.1-pro-preview",
+        "gemini-4-argon"
+    ]
+    for model_name in models:
+        for attempt in range(2):
+            try:
+                print(f"Trying {model_name} (attempt {attempt + 1})...")
+                res = client.models.generate_content(model=model_name, contents=prompt)
+                if res and res.text:
+                    return res.text
+            except Exception as e:
+                print(f"{model_name} busy or unavailable: {e}")
+                time.sleep(6)
+    raise RuntimeError("All Gemini models are currently overloaded. Please re-run in a few minutes.")
+
 def main():
     today = datetime.date.today()
     date_str = today.strftime("%d %B %Y")
@@ -115,16 +137,13 @@ def main():
     {raw_reddit}
     """
     
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=daily_prompt
-    )
-    daily_digest = f"🌙 BD NIGHTLY PULSE — {date_str}\n\n" + response.text
+    daily_text = generate_with_fallback(client, daily_prompt)
+    daily_digest = f"🌙 BD NIGHTLY PULSE — {date_str}\n\n" + daily_text
     send_telegram_message(daily_digest)
     
     # Save to history for Weekly & Monthly rollups
     history = load_history()
-    history.append({"date": str(today), "summary": response.text})
+    history.append({"date": str(today), "summary": daily_text})
     save_history(history)
     
     # 5. Weekly Rollup (Every Sunday -> weekday() == 6)
@@ -139,8 +158,8 @@ def main():
         DATA:
         {last_7}
         """
-        weekly_res = client.models.generate_content(model="gemini-4-argon", contents=weekly_prompt)
-        send_telegram_message(f"📅 BD WEEKLY ROLL-UP ({date_str})\n\n" + weekly_res.text)
+        weekly_text = generate_with_fallback(client, weekly_prompt)
+        send_telegram_message(f"📅 BD WEEKLY ROLL-UP ({date_str})\n\n" + weekly_text)
 
     # 6. Monthly Rollup (1st of every month)
     if today.day == 1 and len(history) >= 10:
@@ -154,8 +173,8 @@ def main():
         DATA:
         {last_30}
         """
-        monthly_res = client.models.generate_content(model="gemini-4-argon", contents=monthly_prompt)
-        send_telegram_message(f"📊 BD MONTHLY REPORT ({date_str})\n\n" + monthly_res.text)
+        monthly_text = generate_with_fallback(client, monthly_prompt)
+        send_telegram_message(f"📊 BD MONTHLY REPORT ({date_str})\n\n" + monthly_text)
 
 if __name__ == "__main__":
     main()
