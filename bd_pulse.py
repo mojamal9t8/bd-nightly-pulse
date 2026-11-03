@@ -116,7 +116,7 @@ def main():
     """
     
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         contents=daily_prompt
     )
     daily_digest = f"🌙 BD NIGHTLY PULSE — {date_str}\n\n" + response.text
@@ -139,7 +139,7 @@ def main():
         DATA:
         {last_7}
         """
-        weekly_res = client.models.generate_content(model="gemini-2.5-flash", contents=weekly_prompt)
+        weekly_res = client.models.generate_content(model="gemini-4-argon", contents=weekly_prompt)
         send_telegram_message(f"📅 BD WEEKLY ROLL-UP ({date_str})\n\n" + weekly_res.text)
 
     # 6. Monthly Rollup (1st of every month)
@@ -154,7 +154,7 @@ def main():
         DATA:
         {last_30}
         """
-        monthly_res = client.models.generate_content(model="gemini-2.5-flash", contents=monthly_prompt)
+        monthly_res = client.models.generate_content(model="gemini-4-argon", contents=monthly_prompt)
         send_telegram_message(f"📊 BD MONTHLY REPORT ({date_str})\n\n" + monthly_res.text)
 
 if __name__ == "__main__":
