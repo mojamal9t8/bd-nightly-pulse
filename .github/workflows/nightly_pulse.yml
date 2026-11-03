@@ -1,0 +1,39 @@
+name: BD Nightly Pulse
+
+on:
+  schedule:
+    - cron: '30 21 * * *' # Runs at 22:30 CET every night
+  workflow_dispatch:      # Lets you trigger a test run anytime with 1 click
+
+permissions:
+  contents: write
+
+jobs:
+  send-briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run BD Pulse Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bd_pulse.py
+
+      - name: Save Daily Memory for Weekly/Monthly Rollup
+        run: |
+          git config user.name "bd-pulse-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add history_log.json
+          git diff --staged --quiet || git commit -m "Update daily history log"
+          git push
